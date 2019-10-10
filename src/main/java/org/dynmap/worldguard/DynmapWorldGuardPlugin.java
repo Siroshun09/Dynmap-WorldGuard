@@ -35,7 +35,7 @@ import java.util.*;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-class DynmapWorldGuardPlugin extends JavaPlugin {
+public class DynmapWorldGuardPlugin extends JavaPlugin {
     private static Logger log;
     private static final String DEF_INFOWINDOW = "<div class=\"infowindow\"><span style=\"font-size:120%;\">%regionname%</span><br /> Owner <span style=\"font-weight:bold;\">%playerowners%</span><br />Flags<br /><span style=\"font-weight:bold;\">%flags%</span></div>";
     private static final String BOOST_FLAG = "dynmap-boost";
@@ -359,6 +359,7 @@ class DynmapWorldGuardPlugin extends JavaPlugin {
         }
     }
 
+    @Override
     public void onEnable() {
         info("initializing");
         PluginManager pm = getServer().getPluginManager();
@@ -487,6 +488,7 @@ class DynmapWorldGuardPlugin extends JavaPlugin {
         info("version " + this.getDescription().getVersion() + " is activated");
     }
 
+    @Override
     public void onDisable() {
         if (set != null) {
             set.deleteMarkerSet();

@@ -44,7 +44,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.UUID;
 import java.util.logging.Level;
 
-class MetricsLite {
+public class MetricsLite {
 
     /**
      * The current revision number
