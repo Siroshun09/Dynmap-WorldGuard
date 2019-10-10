@@ -331,7 +331,7 @@ class MetricsLite {
      * @param key    the key value
      * @param value  the value
      */
-    private static void encodeDataPair(final StringBuilder buffer, final String key, final String value) throws UnsupportedEncodingException {
+    private static void encodeDataPair(final StringBuilder buffer, final String key, final String value) {
         buffer.append('&').append(encode(key)).append('=').append(encode(value));
     }
 
