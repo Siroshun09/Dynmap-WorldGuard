@@ -35,20 +35,16 @@ import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.PluginDescriptionFile;
 import org.bukkit.scheduler.BukkitTask;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.OutputStreamWriter;
-import java.io.UnsupportedEncodingException;
+import java.io.*;
 import java.net.Proxy;
 import java.net.URL;
 import java.net.URLConnection;
 import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.UUID;
 import java.util.logging.Level;
 
-public class MetricsLite {
+class MetricsLite {
 
     /**
      * The current revision number
@@ -100,7 +96,7 @@ public class MetricsLite {
      */
     private volatile BukkitTask taskId = null;
 
-    public MetricsLite(Plugin plugin) throws IOException {
+    MetricsLite(Plugin plugin) throws IOException {
         if (plugin == null) {
             throw new IllegalArgumentException("Plugin cannot be null");
         }
@@ -129,19 +125,17 @@ public class MetricsLite {
      * Start measuring statistics. This will immediately create an async repeating task as the plugin and send
      * the initial data to the metrics backend, and then after that it will post in increments of
      * PING_INTERVAL * 1200 ticks.
-     *
-     * @return True if statistics measuring is running, otherwise false.
      */
-    public boolean start() {
+    void start() {
         synchronized (optOutLock) {
             // Did we opt out?
             if (isOptOut()) {
-                return false;
+                return;
             }
 
             // Is metrics already running?
             if (taskId != null) {
-                return true;
+                return;
             }
 
             // Begin hitting the server with glorious data
@@ -174,7 +168,6 @@ public class MetricsLite {
                 }
             }, 0, PING_INTERVAL * 1200);
 
-            return true;
         }
     }
 
@@ -183,15 +176,12 @@ public class MetricsLite {
      *
      * @return true if metrics should be opted out of it
      */
-    public boolean isOptOut() {
-        synchronized(optOutLock) {
+    private boolean isOptOut() {
+        synchronized (optOutLock) {
             try {
                 // Reload the metrics file
                 configuration.load(getConfigFile());
-            } catch (IOException ex) {
-                Bukkit.getLogger().log(Level.INFO, "[Metrics] " + ex.getMessage());
-                return true;
-            } catch (InvalidConfigurationException ex) {
+            } catch (IOException | InvalidConfigurationException ex) {
                 Bukkit.getLogger().log(Level.INFO, "[Metrics] " + ex.getMessage());
                 return true;
             }
@@ -202,7 +192,7 @@ public class MetricsLite {
     /**
      * Enables metrics for the server by setting "opt-out" to false in the config file and starting the metrics task.
      *
-     * @throws IOException
+     * @throws IOException 例外
      */
     public void enable() throws IOException {
         // This has to be synchronized or it can collide with the check in the task.
@@ -223,7 +213,7 @@ public class MetricsLite {
     /**
      * Disables metrics for the server by setting "opt-out" to true in the config file and canceling the metrics task.
      *
-     * @throws IOException
+     * @throws IOException 例外
      */
     public void disable() throws IOException {
         // This has to be synchronized or it can collide with the check in the task.
@@ -247,7 +237,7 @@ public class MetricsLite {
      *
      * @return the File object for the config file
      */
-    public File getConfigFile() {
+    private File getConfigFile() {
         // I believe the easiest way to get the base folder (e.g craftbukkit set via -P) for plugins to use
         // is to abuse the plugin object we already have
         // plugin.getDataFolder() => base/plugins/PluginA/
@@ -338,8 +328,8 @@ public class MetricsLite {
      * </code>
      *
      * @param buffer the stringbuilder to append the data pair onto
-     * @param key the key value
-     * @param value the value
+     * @param key    the key value
+     * @param value  the value
      */
     private static void encodeDataPair(final StringBuilder buffer, final String key, final String value) throws UnsupportedEncodingException {
         buffer.append('&').append(encode(key)).append('=').append(encode(value));
@@ -351,8 +341,8 @@ public class MetricsLite {
      * @param text the text to encode
      * @return the encoded text, as UTF-8
      */
-    private static String encode(final String text) throws UnsupportedEncodingException {
-        return URLEncoder.encode(text, "UTF-8");
+    private static String encode(final String text) {
+        return URLEncoder.encode(text, StandardCharsets.UTF_8);
     }
 
 }
