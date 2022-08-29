@@ -4,8 +4,6 @@ import com.sk89q.worldedit.math.BlockVector2;
 import com.sk89q.worldedit.math.BlockVector3;
 import com.sk89q.worldedit.world.World;
 import com.sk89q.worldguard.WorldGuard;
-import com.sk89q.worldguard.domains.DefaultDomain;
-import com.sk89q.worldguard.domains.PlayerDomain;
 import com.sk89q.worldguard.protection.flags.Flag;
 import com.sk89q.worldguard.protection.managers.RegionManager;
 import com.sk89q.worldguard.protection.regions.ProtectedPolygonalRegion;
@@ -19,8 +17,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
 
 public class UpdateTask implements Runnable {
 
@@ -125,85 +121,6 @@ public class UpdateTask implements Runnable {
         return true;
     }
 
-    private void addStyle(String resid, String worldid, AreaMarker m, ProtectedRegion region) {
-        AreaStyle as = plugin.cusstyle.get(worldid + "/" + resid);
-        if (as == null) {
-            as = plugin.cusstyle.get(resid);
-        }
-        if (as == null) {    /* Check for wildcard style matches */
-            for (String wc : plugin.cuswildstyle.keySet()) {
-                String[] tok = wc.split("\\|");
-                if ((tok.length == 1) && resid.startsWith(tok[0]))
-                    as = plugin.cuswildstyle.get(wc);
-                else if ((tok.length >= 2) && resid.startsWith(tok[0]) && resid.endsWith(tok[1]))
-                    as = plugin.cuswildstyle.get(wc);
-            }
-        }
-        if (as == null) {    /* Check for owner style matches */
-            if (!plugin.ownerstyle.isEmpty()) {
-                DefaultDomain dd = region.getOwners();
-                PlayerDomain pd = dd.getPlayerDomain();
-                if (pd != null) {
-                    for (String p : pd.getPlayers()) {
-                        as = plugin.ownerstyle.get(p.toLowerCase());
-                        if (as != null) break;
-                    }
-                    if (as == null) {
-                        for (UUID uuid : pd.getUniqueIds()) {
-                            as = plugin.ownerstyle.get(uuid.toString());
-                            if (as != null) break;
-                        }
-                    }
-                    if (as == null) {
-                        for (String p : pd.getPlayers()) {
-                            if (p != null) {
-                                as = plugin.ownerstyle.get(p.toLowerCase());
-                                if (as != null) break;
-                            }
-                        }
-                    }
-                }
-                if (as == null) {
-                    Set<String> grp = dd.getGroups();
-                    if (grp != null) {
-                        for (String p : grp) {
-                            as = plugin.ownerstyle.get(p.toLowerCase());
-                            if (as != null) break;
-                        }
-                    }
-                }
-            }
-        }
-        if (as == null)
-            as = plugin.defstyle;
-
-        boolean unowned = false;
-        if ((region.getOwners().getPlayers().size() == 0) &&
-                (region.getOwners().getUniqueIds().size() == 0) &&
-                (region.getOwners().getGroups().size() == 0)) {
-            unowned = true;
-        }
-        int sc = 0xFF0000;
-        int fc = 0xFF0000;
-        try {
-            if (unowned)
-                sc = Integer.parseInt(as.unownedstrokecolor.substring(1), 16);
-            else
-                sc = Integer.parseInt(as.strokecolor.substring(1), 16);
-            fc = Integer.parseInt(as.fillcolor.substring(1), 16);
-        } catch (NumberFormatException ignored) {
-        }
-        m.setLineStyle(as.strokeweight, as.strokeopacity, sc);
-        m.setFillStyle(as.fillopacity, fc);
-        if (as.label != null) {
-            m.setLabel(as.label);
-        }
-        if (plugin.boost_flag != null) {
-            Boolean b = region.getFlag(plugin.boost_flag);
-            m.setBoostFlag((b != null) && b);
-        }
-    }
-
     /* Handle specific region */
     void handleRegion(World world, ProtectedRegion region, Map<String, AreaMarker> newmap) {
         String name = region.getId();
@@ -257,8 +174,9 @@ public class UpdateTask implements Runnable {
             if (plugin.getBoolean("use3dregions")) { /* If 3D? */
                 m.setRangeY(l1.getY() + 1.0, l0.getY());
             }
+
             /* Set line and fill properties */
-            addStyle(id, world.getName(), m, region);
+            addStyle(m, region);
 
             /* Build popup */
             String desc = formatInfoWindow(region, m);
@@ -267,6 +185,33 @@ public class UpdateTask implements Runnable {
 
             /* Add to map */
             newmap.put(markerid, m);
+        }
+    }
+
+    private void addStyle(AreaMarker m, ProtectedRegion region) {
+        AreaStyle as = plugin.defstyle;
+
+        boolean unowned = (region.getOwners().getPlayers().size() == 0) &&
+                (region.getOwners().getUniqueIds().size() == 0) &&
+                (region.getOwners().getGroups().size() == 0);
+        int sc = 0xFF0000;
+        int fc = 0xFF0000;
+        try {
+            if (unowned)
+                sc = Integer.parseInt(as.unownedstrokecolor.substring(1), 16);
+            else
+                sc = Integer.parseInt(as.strokecolor.substring(1), 16);
+            fc = Integer.parseInt(as.fillcolor.substring(1), 16);
+        } catch (NumberFormatException ignored) {
+        }
+        m.setLineStyle(as.strokeweight, as.strokeopacity, sc);
+        m.setFillStyle(as.fillopacity, fc);
+        if (as.label != null) {
+            m.setLabel(as.label);
+        }
+        if (plugin.boost_flag != null) {
+            Boolean b = region.getFlag(plugin.boost_flag);
+            m.setBoostFlag((b != null) && b);
         }
     }
 
@@ -279,6 +224,6 @@ public class UpdateTask implements Runnable {
     private long getUpdatesPeriod() {
         int per = plugin.getInt("update.period", 300);
         if (per < 15) per = 15;
-        return per * 20;
+        return per * 20L;
     }
 }

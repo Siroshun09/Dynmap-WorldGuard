@@ -35,18 +35,6 @@ visibleregions: [ ]
 # To hide all regions on a given world, add 'world:<worldname>' to the list
 hiddenregions: [ ]
 
-# Optional per-region overrides for regionstyle (any defined replace those in regionstyle)
-#  Also supports region IDs with single wildcard '|' pattern
-custstyle:
-  customregion1:
-    strokeColor: "#00FF00"
-
-# Optional per-owner overrides for regionstyle (lower priority than custstyle) - works for group or user names
-ownerstyle:
-  kingoftheworld:
-    strokecolor: "#C0C0C0"
-
-
 # Limit depth of child regions (1=just top regions, 2=top plus children of top)
 maxdepth: 16
 
