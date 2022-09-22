@@ -1,15 +1,14 @@
 package org.dynmap.worldguard;
 
 import com.sk89q.worldedit.math.BlockVector2;
-import com.sk89q.worldedit.math.BlockVector3;
 import com.sk89q.worldedit.world.World;
 import com.sk89q.worldguard.WorldGuard;
 import com.sk89q.worldguard.protection.flags.Flag;
 import com.sk89q.worldguard.protection.managers.RegionManager;
-import com.sk89q.worldguard.protection.regions.ProtectedPolygonalRegion;
 import com.sk89q.worldguard.protection.regions.ProtectedRegion;
 import com.sk89q.worldguard.protection.regions.RegionType;
 import com.sk89q.worldguard.util.profile.cache.ProfileCache;
+import java.util.Collections;
 import org.bukkit.Bukkit;
 import org.dynmap.markers.AreaMarker;
 
@@ -121,71 +120,115 @@ public class UpdateTask implements Runnable {
         return true;
     }
 
+    private static double cross(BlockVector2 p1, BlockVector2 p2) {
+        return p1.getX() * p2.getZ() - p1.getZ() * p2.getX();
+    }
+
+    private static double calcAreaOfPolygon(List<BlockVector2> points) {
+        double area = 0;
+        for (int i = 0; i < points.size(); i++) {
+            area += cross(points.get(i), points.get((i + 1) % points.size()));
+        }
+        return area / 2.0;
+    }
+
+    /**
+     * Calc loop direction of given polygon.
+     *
+     * @param points Polygon points.
+     *
+     * @return When returns 1 it is clockwise, when returns -1 it is anticlockwise.
+     *         Other than that, polygon is collapsed.
+     */
+    private static int getPolygonLoop(List<BlockVector2> points) {
+        double area = calcAreaOfPolygon(points);
+        if (area > 0) {
+            return 1;
+        } else if (area < 0) {
+            return -1;
+        } else {
+            return 0;
+        }
+    }
+
+    private static List<BlockVector2> expandPolygonXZByOne(List<BlockVector2> points) {
+        List<BlockVector2> pointsCopy = new ArrayList<>(points);
+        int loop = getPolygonLoop(points);
+        if (loop == 0) {
+            return pointsCopy;
+        }
+        if (loop != 1) {
+            Collections.reverse(pointsCopy);
+        }
+
+        List<BlockVector2> result = new ArrayList<>();
+        for (int i = 0; i < pointsCopy.size(); i++) {
+            int xPrev = pointsCopy.get((i - 1 + pointsCopy.size()) % pointsCopy.size()).getX();
+            int zPrev = pointsCopy.get((i - 1 + pointsCopy.size()) % pointsCopy.size()).getZ();
+            int xCur = pointsCopy.get(i).getX();
+            int zCur = pointsCopy.get(i).getZ();
+            int xNext = pointsCopy.get((i + 1) % pointsCopy.size()).getX();
+            int zNext = pointsCopy.get((i + 1) % pointsCopy.size()).getZ();
+
+            int xCurNew = xCur;
+            int zCurNew = zCur;
+
+            if (zPrev < zCur || zCur < zNext) {
+                xCurNew++;
+            }
+            if (xCur < xPrev || xNext < xCur) {
+                zCurNew++;
+            }
+
+            result.add(BlockVector2.at(xCurNew, zCurNew));
+        }
+        return result;
+    }
+
     /* Handle specific region */
     void handleRegion(World world, ProtectedRegion region, Map<String, AreaMarker> newmap) {
+        if (!isVisible(region.getId(), world.getName())) {
+            return;
+        }
+        if (region.getType() != RegionType.CUBOID && region.getType() != RegionType.POLYGON) {
+            return;
+        }
+
+        List<BlockVector2> points = expandPolygonXZByOne(region.getPoints());
+        double[] x = new double[points.size()];
+        double[] z = new double[points.size()];
+        for (int i = 0; i < points.size(); i++) {
+            x[i] = points.get(i).getX();
+            z[i] = points.get(i).getZ();
+        }
+
         String name = region.getId();
-        /* Make first letter uppercase */
         name = name.substring(0, 1).toUpperCase() + name.substring(1);
-        double[] x;
-        double[] z;
 
-        /* Handle areas */
-        if (isVisible(region.getId(), world.getName())) {
-            String id = region.getId();
-            RegionType tn = region.getType();
-            BlockVector3 l0 = region.getMinimumPoint();
-            BlockVector3 l1 = region.getMaximumPoint();
-
-            if (tn == RegionType.CUBOID) { /* Cubiod region? */
-                /* Make outline */
-                x = new double[4];
-                z = new double[4];
-                x[0] = l0.getX();
-                z[0] = l0.getZ();
-                x[1] = l0.getX();
-                z[1] = l1.getZ() + 1.0;
-                x[2] = l1.getX() + 1.0;
-                z[2] = l1.getZ() + 1.0;
-                x[3] = l1.getX() + 1.0;
-                z[3] = l0.getZ();
-            } else if (tn == RegionType.POLYGON) {
-                ProtectedPolygonalRegion ppr = (ProtectedPolygonalRegion) region;
-                List<BlockVector2> points = ppr.getPoints();
-                x = new double[points.size()];
-                z = new double[points.size()];
-                for (int i = 0; i < points.size(); i++) {
-                    BlockVector2 pt = points.get(i);
-                    x[i] = pt.getX();
-                    z[i] = pt.getZ();
-                }
-            } else {  /* Unsupported type */
+        String markerId = world.getName() + "_" + region.getId();
+        AreaMarker m = plugin.resareas.remove(markerId); /* Existing area? */
+        if (m == null) {
+            m = plugin.set.createAreaMarker(markerId, name, false, world.getName(), x, z, false);
+            if (m == null) {
                 return;
             }
-            String markerid = world.getName() + "_" + id;
-            AreaMarker m = plugin.resareas.remove(markerid); /* Existing area? */
-            if (m == null) {
-                m = plugin.set.createAreaMarker(markerid, name, false, world.getName(), x, z, false);
-                if (m == null)
-                    return;
-            } else {
-                m.setCornerLocations(x, z); /* Replace corner locations */
-                m.setLabel(name);   /* Update label */
-            }
-            if (plugin.getBoolean("use3dregions")) { /* If 3D? */
-                m.setRangeY(l1.getY() + 1.0, l0.getY());
-            }
-
-            /* Set line and fill properties */
-            addStyle(m, region);
-
-            /* Build popup */
-            String desc = formatInfoWindow(region, m);
-
-            m.setDescription(desc); /* Set popup */
-
-            /* Add to map */
-            newmap.put(markerid, m);
+        } else {
+            m.setCornerLocations(x, z); /* Replace corner locations */
+            m.setLabel(name);   /* Update label */
         }
+        if (plugin.getBoolean("use3dregions")) { /* If 3D? */
+            m.setRangeY(region.getMaximumPoint().getY() + 1.0, region.getMinimumPoint().getY());
+        }
+
+        /* Set line and fill properties */
+        addStyle(m, region);
+
+        /* Build popup */
+        String desc = formatInfoWindow(region, m);
+        m.setDescription(desc); /* Set popup */
+
+        /* Add to map */
+        newmap.put(markerId, m);
     }
 
     private void addStyle(AreaMarker m, ProtectedRegion region) {
