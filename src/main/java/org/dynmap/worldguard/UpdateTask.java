@@ -1,6 +1,7 @@
 package org.dynmap.worldguard;
 
 import com.sk89q.worldedit.math.BlockVector2;
+import com.sk89q.worldedit.regions.Polygonal2DRegion;
 import com.sk89q.worldedit.world.World;
 import com.sk89q.worldguard.WorldGuard;
 import com.sk89q.worldguard.protection.flags.Flag;
@@ -153,15 +154,26 @@ public class UpdateTask implements Runnable {
 
     private static List<BlockVector2> expandPolygonXZByOne(List<BlockVector2> points) {
         List<BlockVector2> pointsCopy = new ArrayList<>(points);
+        if (points.size() < 3) {
+            return pointsCopy;
+        }
+
+        List<BlockVector2> result = new ArrayList<>();
         int loop = getPolygonLoop(points);
         if (loop == 0) {
-            return pointsCopy;
+            Polygonal2DRegion poly2d = new Polygonal2DRegion(null, points, 0, 0);
+            BlockVector2 max = poly2d.getMaximumPoint().toBlockVector2();
+            BlockVector2 min = poly2d.getMinimumPoint().toBlockVector2();
+            result.add(max);
+            result.add(max.add(1, 0));
+            result.add(min.add(1, 0));
+            result.add(min);
+            return result;
         }
         if (loop != 1) {
             Collections.reverse(pointsCopy);
         }
 
-        List<BlockVector2> result = new ArrayList<>();
         for (int i = 0; i < pointsCopy.size(); i++) {
             int xPrev = pointsCopy.get((i - 1 + pointsCopy.size()) % pointsCopy.size()).getX();
             int zPrev = pointsCopy.get((i - 1 + pointsCopy.size()) % pointsCopy.size()).getZ();
