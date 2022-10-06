@@ -1,11 +1,13 @@
 package org.dynmap.worldguard;
 
 import com.sk89q.worldedit.math.BlockVector2;
+import com.sk89q.worldedit.math.BlockVector3;
 import com.sk89q.worldedit.regions.Polygonal2DRegion;
 import com.sk89q.worldedit.world.World;
 import com.sk89q.worldguard.WorldGuard;
 import com.sk89q.worldguard.protection.flags.Flag;
 import com.sk89q.worldguard.protection.managers.RegionManager;
+import com.sk89q.worldguard.protection.regions.ProtectedPolygonalRegion;
 import com.sk89q.worldguard.protection.regions.ProtectedRegion;
 import com.sk89q.worldguard.protection.regions.RegionType;
 import com.sk89q.worldguard.util.profile.cache.ProfileCache;
@@ -181,21 +183,36 @@ public class UpdateTask implements Runnable {
             Collections.reverse(pointsCopy);
         }
 
+        List<BlockVector2> pointAdded = new ArrayList<>();
         for (int i = 0; i < pointsCopy.size(); i++) {
-            int xPrev = pointsCopy.get((i - 1 + pointsCopy.size()) % pointsCopy.size()).getX();
-            int zPrev = pointsCopy.get((i - 1 + pointsCopy.size()) % pointsCopy.size()).getZ();
-            int xCur = pointsCopy.get(i).getX();
-            int zCur = pointsCopy.get(i).getZ();
-            int xNext = pointsCopy.get((i + 1) % pointsCopy.size()).getX();
-            int zNext = pointsCopy.get((i + 1) % pointsCopy.size()).getZ();
+            BlockVector2 prev = pointsCopy.get((i - 1 + pointsCopy.size()) % pointsCopy.size());
+            BlockVector2 cur = pointsCopy.get(i);
+            BlockVector2 next = pointsCopy.get((i + 1) % pointsCopy.size());
+            pointAdded.add(cur);
+            if (cross(cur.subtract(prev), next.subtract(cur)) == 0 && cur.subtract(prev).dot(next.subtract(cur)) < 0) {
+                pointAdded.add(cur);
+            }
+        }
+        pointsCopy = pointAdded;
+
+        for (int i = 0; i < pointsCopy.size(); i++) {
+            BlockVector2 prev = pointsCopy.get((i - 1 + pointsCopy.size()) % pointsCopy.size());
+            BlockVector2 cur = pointsCopy.get(i);
+            BlockVector2 next = pointsCopy.get((i + 1) % pointsCopy.size());
+            int xPrev = prev.getX();
+            int zPrev = prev.getZ();
+            int xCur = cur.getX();
+            int zCur = cur.getZ();
+            int xNext = next.getX();
+            int zNext = next.getZ();
 
             int xCurNew = xCur;
             int zCurNew = zCur;
 
-            if (zPrev < zCur || zCur < zNext) {
+            if (zPrev < zCur || zCur < zNext || cur.equals(next) && xPrev < xCur || prev.equals(cur) && xNext < xCur) {
                 xCurNew++;
             }
-            if (xCur < xPrev || xNext < xCur) {
+            if (xCur < xPrev || xNext < xCur || cur.equals(next) && zPrev < zCur || prev.equals(cur) && zNext < zCur) {
                 zCurNew++;
             }
 
