@@ -1,7 +1,6 @@
 package org.dynmap.worldguard;
 
 import com.sk89q.worldedit.math.BlockVector2;
-import com.sk89q.worldedit.math.BlockVector3;
 import com.sk89q.worldedit.regions.Polygonal2DRegion;
 import com.sk89q.worldedit.world.World;
 import com.sk89q.worldguard.WorldGuard;
@@ -109,17 +108,39 @@ public class UpdateTask implements Runnable {
     }
 
     private boolean isVisible(String id, String worldname) {
-        if ((plugin.visible != null) && (plugin.visible.size() > 0)) {
-            if ((!plugin.visible.contains(id))
-                    && (!plugin.visible.contains("world:" + worldname)) && (!plugin.visible.contains(worldname + "/" + id))) {
+        var defaultHidden = plugin.hiddenSettingMap.getOrDefault("default", Collections.emptyList());
+
+        if (!isVisible(defaultHidden, id)) {
+            return false;
+        }
+
+        var worldHidden = plugin.hiddenSettingMap.getOrDefault(worldname, Collections.emptyList());
+
+        return isVisible(worldHidden, id);
+    }
+
+    private boolean isVisible(List<String> hiddenList, String id) {
+        if (hiddenList.isEmpty()) {
+            return true;
+        }
+
+        for (var hidden : hiddenList) {
+            if (hidden.equals(id)) {
+                return false;
+            }
+
+            if (!hidden.contains("*")) {
+                continue;
+            }
+
+            var matching = hidden.replace("*", "");
+
+            if ((hidden.charAt(0) == '*' && id.endsWith(matching)) ||
+                    (hidden.charAt(hidden.length() - 1) == '*' && id.startsWith(matching))) {
                 return false;
             }
         }
-        if ((plugin.hidden != null) && (plugin.hidden.size() > 0)) {
-            return !plugin.hidden.contains(id)
-                    && !plugin.hidden.contains("world:" + worldname)
-                    && !plugin.hidden.contains(worldname + "/" + id);
-        }
+
         return true;
     }
 

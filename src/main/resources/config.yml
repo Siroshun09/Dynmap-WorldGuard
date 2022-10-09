@@ -27,13 +27,17 @@ regionstyle:
   fillOpacity: 0.35
   unownedStrokeColor: "#00FF00"
 
-# Optional setting to limit which regions to show, by name - if commented out, all regions are shown
-# To show all regions on a given world, add 'world:<worldname>' to the list
-visibleregions: [ ]
-
-# Optional setting to hide specific regions, by name
-# To hide all regions on a given world, add 'world:<worldname>' to the list
-hiddenregions: [ ]
+# Settings to disable the showing of specified regions on the map.
+#
+# Putting * at the start/end of a string hides regions in which names end/begin with the string.
+#
+# `prefix_*` hides regions whose names begin with `prefix_`, e.g. `prefix_1` `prefix_home`.
+# `*_suffix` hides regions whose names end with `_suffix`, e.g. `1_suffix` `home_suffix`.
+hidden-regions:
+  default:
+    - region_id_to_hidden
+  world-name:
+    - region_id_to_hidden
 
 # Limit depth of child regions (1=just top regions, 2=top plus children of top)
 maxdepth: 16

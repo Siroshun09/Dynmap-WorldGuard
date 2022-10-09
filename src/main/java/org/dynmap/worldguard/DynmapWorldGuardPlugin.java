@@ -11,8 +11,8 @@ import org.dynmap.markers.MarkerAPI;
 import org.dynmap.markers.MarkerSet;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 public class DynmapWorldGuardPlugin extends JavaPlugin {
     DynmapAPI api;
@@ -23,8 +23,7 @@ public class DynmapWorldGuardPlugin extends JavaPlugin {
     Map<String, AreaStyle> cuswildstyle;
     Map<String, AreaStyle> ownerstyle;
     Map<String, AreaMarker> resareas = new HashMap<>();
-    Set<String> visible;
-    Set<String> hidden;
+    final Map<String, List<String>> hiddenSettingMap = new HashMap<>();
 
     @Override
     public void onLoad() {
@@ -128,8 +127,13 @@ public class DynmapWorldGuardPlugin extends JavaPlugin {
             }
         }
 
-        visible = Set.copyOf(getConfig().getStringList("visibleregions"));
-        hidden = Set.copyOf(getConfig().getStringList("hiddenregions"));
+        var hiddenSection = getConfig().getConfigurationSection("hidden-regions");
+
+        if (hiddenSection != null) {
+            for (var worldKey : hiddenSection.getKeys(false)) {
+                hiddenSettingMap.put(worldKey, hiddenSection.getStringList(worldKey));
+            }
+        }
 
         getServer().getScheduler().scheduleSyncDelayedTask(this, new UpdateTask(this), 40);
     }
