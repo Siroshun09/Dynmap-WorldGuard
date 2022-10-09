@@ -6,15 +6,14 @@ import com.sk89q.worldedit.world.World;
 import com.sk89q.worldguard.WorldGuard;
 import com.sk89q.worldguard.protection.flags.Flag;
 import com.sk89q.worldguard.protection.managers.RegionManager;
-import com.sk89q.worldguard.protection.regions.ProtectedPolygonalRegion;
 import com.sk89q.worldguard.protection.regions.ProtectedRegion;
 import com.sk89q.worldguard.protection.regions.RegionType;
 import com.sk89q.worldguard.util.profile.cache.ProfileCache;
-import java.util.Collections;
 import org.bukkit.Bukkit;
 import org.dynmap.markers.AreaMarker;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -160,9 +159,8 @@ public class UpdateTask implements Runnable {
      * Calc loop direction of given polygon.
      *
      * @param points Polygon points.
-     *
      * @return When returns 1 it is clockwise, when returns -1 it is anticlockwise.
-     *         Other than that, polygon is collapsed.
+     * Other than that, polygon is collapsed.
      */
     private static int getPolygonLoop(List<BlockVector2> points) {
         double area = calcAreaOfPolygon(points);
