@@ -15,6 +15,22 @@ import java.util.List;
 import java.util.Map;
 
 public class DynmapWorldGuardPlugin extends JavaPlugin {
+
+    static final boolean FOLIA;
+
+    static {
+        boolean isFolia;
+
+        try {
+            Class.forName("io.papermc.paper.threadedregions.RegionizedServerInitEvent");
+            isFolia = true;
+        } catch (ClassNotFoundException e) {
+            isFolia = false;
+        }
+
+        FOLIA = isFolia;
+    }
+
     DynmapAPI api;
     BooleanFlag boost_flag;
     MarkerSet set;
@@ -135,7 +151,7 @@ public class DynmapWorldGuardPlugin extends JavaPlugin {
             }
         }
 
-        getServer().getScheduler().scheduleSyncDelayedTask(this, new UpdateTask(this), 40);
+        scheduleUpdateTask(new UpdateTask(this), 40);
     }
 
     String getString(String key, String def) {
@@ -157,5 +173,13 @@ public class DynmapWorldGuardPlugin extends JavaPlugin {
 
     double getDouble(String key, double def) {
         return getConfig().getDouble(key, def);
+    }
+
+    void scheduleUpdateTask(UpdateTask task, long delay) {
+        if (FOLIA) {
+            getServer().getGlobalRegionScheduler().runDelayed(this, $ -> task.run(), delay);
+        } else {
+            getServer().getScheduler().scheduleSyncDelayedTask(this, task, delay);
+        }
     }
 }

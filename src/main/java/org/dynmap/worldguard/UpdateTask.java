@@ -50,7 +50,7 @@ public class UpdateTask implements Runnable {
                 /* And replace with new map */
                 plugin.resareas = newmap;
                 // Set up for next update (new job)
-                plugin.getServer().getScheduler().scheduleSyncDelayedTask(plugin, new UpdateTask(plugin), getUpdatesPeriod());
+                plugin.scheduleUpdateTask(new UpdateTask(plugin), getUpdatesPeriod());
                 return;
             } else {
                 curworld = worldsToDo.remove(0);
@@ -83,7 +83,7 @@ public class UpdateTask implements Runnable {
             handleRegion(curworld, pr, newmap);
         }
         // Tick next step in the job
-        plugin.getServer().getScheduler().scheduleSyncDelayedTask(plugin, this, 1);
+        plugin.scheduleUpdateTask(this, 1);
     }
 
     private String formatInfoWindow(ProtectedRegion rg, AreaMarker m) {
